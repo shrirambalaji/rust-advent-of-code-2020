@@ -26,10 +26,9 @@ use std::{env, fs};
 // * If the element at the specified position is a #, increment `tree_counter`.
 
 const TREE: char = '#';
-const SQUARE: char = '.';
 
 #[derive(Debug, PartialEq)]
-struct Traverse {
+struct Jump {
     column: i32,
     row: i32,
 }
@@ -44,11 +43,11 @@ fn create_grid<'a>(input: &str) -> Vec<Vec<char>> {
     grid
 }
 
-fn parse_direction(direction: &str) -> Traverse {
-    let mut Traverse = Traverse { column: 0, row: 0 };
+fn parse_direction(direction: &str) -> Jump {
+    let mut jump = Jump { column: 0, row: 0 };
 
-    let instructions: Vec<&str> = direction.split(",").collect();
-    for instruction in instructions.iter() {
+    let navigation_instructions: Vec<&str> = direction.split(",").collect();
+    for instruction in navigation_instructions.iter() {
         let direction_and_steps: Vec<&str> = instruction.split_whitespace().collect();
         let direction = direction_and_steps
             .get(0)
@@ -61,38 +60,41 @@ fn parse_direction(direction: &str) -> Traverse {
         let step = step.parse::<i32>().unwrap();
 
         match *direction {
-            "up" => Traverse.row = step,
-            "right" => Traverse.column = step,
-            "down" => Traverse.row = -step,
-            "left" => Traverse.column = -step,
+            "up" => jump.row = step,
+            "right" => jump.column = step,
+            "down" => jump.row = step,
+            "left" => jump.column = -step,
             _ => {}
         }
     }
 
-    Traverse
+    jump
 }
 
-fn find_number_of_trees(mut grid: Vec<Vec<char>>, direction: &str) -> i32 {
-    let count = 0;
-    let direction = parse_direction(direction);
+fn find_number_of_trees(grid: &mut Vec<Vec<char>>, direction: &str) -> i32 {
+    let mut count = 0;
+    let jump = parse_direction(direction);
 
-    for (row_index, row) in grid.iter().enumerate() {
-        for (col_index, col) in row.iter().enumerate() {
-            let traversed_col_index = if direction.column > 0 {
-                col_index + direction.column as usize
-            } else {
-                col_index - direction.column as usize
-            };
+    let col_len = grid[0].len();
 
-            let traversed_row_index = if direction.row > 0 {
-                row_index + direction.row as usize
-            } else {
-                row_index - direction.row as usize
-            };
+    let mut col_index = 0;
+    let mut row_index = 0;
 
-            let grid_row = grid.get(traversed_row_index).unwrap();
-            let element = grid_row.get(traversed_col_index).unwrap();
-            println!("{}", element);
+    for row in grid.iter() {
+        col_index = col_index + jump.column as usize;
+
+        if row_index >= row.len() {
+            row_index = row_index + jump.row as usize % row.len();
+        } else {
+            row_index = row_index + jump.row as usize;
+        }
+
+        if let Some(new_row) = grid.get(row_index) {
+            if let Some(value) = new_row.get(col_index % col_len) {
+                if *value == TREE {
+                    count += 1
+                }
+            }
         }
     }
 
@@ -103,10 +105,35 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let filepath = args.get(1).expect("Input file cannot be empty!");
     let input = fs::read_to_string(filepath).expect("Something went wrong while reading input");
-    let grid = create_grid(&input);
+    let mut grid = create_grid(&input);
 
-    let tree_count = find_number_of_trees(grid, "right 1, down 3");
-    println!("Number of trees {}", tree_count);
+    // -- Part one --
+    println!("-- Part one --");
+    let tree_count_r3_d1 = find_number_of_trees(&mut grid, "right 3, down 1");
+    println!(
+        "Number of trees for Slope - right 3; down 1: {}",
+        tree_count_r3_d1
+    );
+
+    // -- Part Two --
+    let slopes = vec![
+        "right 1, down 1",
+        "right 3, down 1",
+        "right 5, down 1",
+        "right 7, down 1",
+        "right 1, down 2",
+    ];
+
+    println!("");
+    println!("-- Part two --");
+    // Product of trees with slopes
+    let product: i64 = slopes.iter().fold(1, |acc: i64, direction| {
+        let count = find_number_of_trees(&mut grid, direction);
+        println!("{}: {}", direction, count);
+        acc * count as i64
+    });
+
+    println!("Product of all slopes: {:?}", product);
 }
 
 #[cfg(test)]
@@ -131,13 +158,11 @@ mod tests {
         assert!(vec_compare(&expected, &actual));
     }
 
-    // vec!['.', '.', '#', '#',   '#', '.', '.', '.',    '.', '#', '.', '.'],
-
     #[test]
     fn should_parse_direction() {
         let direction = "right 3, down 1";
         let actual = parse_direction(direction);
-        let expected = Traverse { column: 3, row: 1 };
+        let expected = Jump { column: 3, row: 1 };
 
         assert_eq!(actual, expected);
     }
