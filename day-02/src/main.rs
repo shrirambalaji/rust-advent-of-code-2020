@@ -5,13 +5,13 @@ pub trait ValidatePassword {
     fn validate(&self, password: &str) -> bool;
 }
 
-struct OldPasswordRule {
+struct OldPasswordPolicy {
     min: i32,
     max: i32,
     letter: char,
 }
 
-impl ValidatePassword for OldPasswordRule {
+impl ValidatePassword for OldPasswordPolicy {
     fn validate(&self, password: &str) -> bool {
         let mut occurences: HashMap<char, i32> = HashMap::new();
 
@@ -40,13 +40,13 @@ impl ValidatePassword for OldPasswordRule {
     }
 }
 
-struct NewPasswordRule {
+struct NewPasswordPolicy {
     first_position: usize,
     last_position: usize,
     letter: char,
 }
 
-impl ValidatePassword for NewPasswordRule {
+impl ValidatePassword for NewPasswordPolicy {
     fn validate(&self, password: &str) -> bool {
         let mut has_char_at_first_position = false;
         let mut has_char_at_last_position = false;
@@ -121,7 +121,7 @@ fn is_valid(policy_password: &str, policy_type: &PolicyType) -> bool {
                 .parse::<i32>()
                 .expect("invalid range max");
 
-            let policy = OldPasswordRule {
+            let policy = OldPasswordPolicy {
                 min: range_min,
                 max: range_max,
                 letter,
@@ -138,7 +138,7 @@ fn is_valid(policy_password: &str, policy_type: &PolicyType) -> bool {
                 .parse::<usize>()
                 .expect("invalid last position");
 
-            let policy = NewPasswordRule {
+            let policy = NewPasswordPolicy {
                 first_position: first_position - 1,
                 last_position: last_position - 1,
                 letter,
@@ -160,6 +160,7 @@ fn find_valid_password_count(policies_and_passwords: &Vec<String>, policy_type: 
 
     count
 }
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let input_path = match args.get(1) {
@@ -174,4 +175,12 @@ fn main() {
 
     let count = find_valid_password_count(&policies_and_passwords, PolicyType::New);
     println!("Number of valid passwords by New Policy: {}", count);
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn name() {
+        unimplemented!();
+    }
 }
