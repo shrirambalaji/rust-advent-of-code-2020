@@ -21,9 +21,12 @@ use std::{env, fs};
 // Output: 7#'s
 
 // Algorithm
-// * Parse the input and convert it into a Vec<Vec<char>> ie. Grid
-// * Traverse from start of the array along the given direction.
-// * If the element at the specified position is a #, increment `tree_counter`.
+// * Parse the input and convert it into a Vec<Vec<char>> ie. a Grid
+// * Traverse from start of the Grid along the specified slope, by moving across rows and columns
+// * After reaching the element at the end of a given slope, if the element is a #, increment counter`.
+// * Continue moving along till you reach the last row in the Grid.
+// * While traversing the Grid, if you reach the end of the last column wrap around to the first column using `col[index % col.len()]`.
+// * This is necessary as the problem mentions that the Grid is not fixed on the right, and can extend as much as necessary.
 
 const TREE: char = '#';
 
@@ -33,6 +36,7 @@ struct Jump {
     row: i32,
 }
 
+// Creates a 2D Vector of Characters
 fn create_grid<'a>(input: &str) -> Vec<Vec<char>> {
     let mut grid = Vec::new();
     for line in input.lines() {
@@ -43,24 +47,21 @@ fn create_grid<'a>(input: &str) -> Vec<Vec<char>> {
     grid
 }
 
-fn parse_direction(direction: &str) -> Jump {
+/// Returns a the number of columns and rows to Jump while moving along a Slope
+fn parse_slope(slope: &str) -> Jump {
     let mut jump = Jump { column: 0, row: 0 };
 
-    let navigation_instructions: Vec<&str> = direction.split(",").collect();
+    let navigation_instructions: Vec<&str> = slope.split(",").collect();
     for instruction in navigation_instructions.iter() {
-        let direction_and_steps: Vec<&str> = instruction.split_whitespace().collect();
-        let direction = direction_and_steps
-            .get(0)
-            .expect(&format!("Invalid direction {}", direction));
+        let slope_vec: Vec<&str> = instruction.split_whitespace().collect();
+        let direction = slope_vec.get(0).expect(&format!("Invalid slope {}", slope));
 
-        let step = direction_and_steps
-            .get(1)
-            .expect(&format!("Invalid step {}", direction));
+        let step = slope_vec.get(1).expect(&format!("Invalid step {}", slope));
 
         let step = step.parse::<i32>().unwrap();
 
         match *direction {
-            "up" => jump.row = step,
+            "up" => jump.row = -step,
             "right" => jump.column = step,
             "down" => jump.row = step,
             "left" => jump.column = -step,
@@ -71,9 +72,10 @@ fn parse_direction(direction: &str) -> Jump {
     jump
 }
 
-fn find_number_of_trees(grid: &mut Vec<Vec<char>>, direction: &str) -> i32 {
+/// Returns the number of characters found while traversing along a given slope.
+fn get_character_count_along_slope(grid: &mut Vec<Vec<char>>, slope: &str, character_to_count: char) -> i32 {
     let mut count = 0;
-    let jump = parse_direction(direction);
+    let jump = parse_slope(slope);
 
     let col_len = grid[0].len();
 
@@ -91,7 +93,7 @@ fn find_number_of_trees(grid: &mut Vec<Vec<char>>, direction: &str) -> i32 {
 
         if let Some(new_row) = grid.get(row_index) {
             if let Some(value) = new_row.get(col_index % col_len) {
-                if *value == TREE {
+                if *value == character_to_count {
                     count += 1
                 }
             }
@@ -101,15 +103,20 @@ fn find_number_of_trees(grid: &mut Vec<Vec<char>>, direction: &str) -> i32 {
     count
 }
 
+fn process(input: &str, direction: &str) -> i32 {
+    let mut grid = create_grid(&input);
+    let count = get_character_count_along_slope(&mut grid, direction, TREE);
+    count
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let filepath = args.get(1).expect("Input file cannot be empty!");
     let input = fs::read_to_string(filepath).expect("Something went wrong while reading input");
-    let mut grid = create_grid(&input);
 
     // -- Part one --
     println!("-- Part one --");
-    let tree_count_r3_d1 = find_number_of_trees(&mut grid, "right 3, down 1");
+    let tree_count_r3_d1 = process(&input, "right 3, down 1");
     println!(
         "Number of trees for Slope - right 3; down 1: {}",
         tree_count_r3_d1
@@ -126,9 +133,10 @@ fn main() {
 
     println!("");
     println!("-- Part two --");
+
     // Product of trees with slopes
     let product: i64 = slopes.iter().fold(1, |acc: i64, direction| {
-        let count = find_number_of_trees(&mut grid, direction);
+        let count = process(&input, direction);
         println!("{}: {}", direction, count);
         acc * count as i64
     });
@@ -139,6 +147,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    /// used to compare vectors of the same type
     fn vec_compare<T: std::cmp::PartialEq>(vec1: &[T], vec2: &[T]) -> bool {
         (vec1.len() == vec2.len()) && vec1.iter().zip(vec2).all(|(a, b)| *a == *b)
     }
@@ -159,11 +168,32 @@ mod tests {
     }
 
     #[test]
-    fn should_parse_direction() {
+    fn should_parse_slope() {
         let direction = "right 3, down 1";
-        let actual = parse_direction(direction);
+        let actual = parse_slope(direction);
         let expected = Jump { column: 3, row: 1 };
 
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn should_process_input_and_return_count() {
+        assert_eq!(
+            process(
+                "..##.......
+#...#...#..
+.#....#..#.
+..#.#...#.#
+.#...##..#.
+..#.##.....
+.#.#.#....#
+.#........#
+#.##...#...
+#...##....#
+.#..#...#.#",
+                "right 3, down 1"
+            ),
+            7
+        )
     }
 }
