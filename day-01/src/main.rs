@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs;
+use std::{env, fs};
 
 // Problem 1: Fixing your expense report.
 // https://adventofcode.com/2020/day/1
@@ -8,10 +8,13 @@ use std::fs;
 const TARGET_SUM: i32 = 2020;
 
 fn main() {
-    println!("--- PUZZLE 1 ---");
+    let args = env::args().collect::<Vec<String>>();
+    let filepath = &args[1];
+
+    println!("--- Part 1 ---");
     let mut entries: Vec<i32> = Vec::new();
     let mut map: HashMap<i32, usize> = HashMap::new();
-    let input = fs::read_to_string("./input.txt").unwrap();
+    let input = fs::read_to_string(filepath).unwrap();
     for line in input.lines() {
         let entry = line.parse::<i32>().unwrap();
         entries.push(entry);
@@ -35,7 +38,8 @@ fn main() {
         }
     }
 
-    println!("--- PUZZLE 1 EXTENDED ---");
+    println!("");
+    println!("-- Part 1 Extended --");
     // Hint: 3Sum
     // Find three numbers that sum to target
     entries.sort();
