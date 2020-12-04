@@ -47,7 +47,7 @@ fn create_grid<'a>(input: &str) -> Vec<Vec<char>> {
     grid
 }
 
-/// Returns a the number of columns and rows to Jump while moving along a Slope
+/// Returns the number of columns and rows to Jump while moving along a Slope
 fn parse_slope(slope: &str) -> Jump {
     let mut jump = Jump { column: 0, row: 0 };
 
@@ -134,7 +134,7 @@ fn main() {
     println!("");
     println!("-- Part two --");
 
-    // Product of trees with slopes
+    // Product of number of trees across slopes
     let product: i64 = slopes.iter().fold(1, |acc: i64, direction| {
         let count = process(&input, direction);
         println!("{}: {}", direction, count);
