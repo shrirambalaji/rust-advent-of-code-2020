@@ -1,15 +1,5 @@
-use std::collections::{HashMap, HashSet};
-use std::{env, fs};
-
-#[allow(dead_code)]
-fn get_repeated_letter_count(s: &str) -> usize {
-    let mut freq: HashMap<char, i32> = HashMap::new();
-    s.chars().for_each(|letter| {
-        freq.entry(letter).and_modify(|e| *e = *e + 1).or_insert(1);
-    });
-
-    freq.iter().filter(|(_letter, count)| *count > &1).count()
-}
+use array_tool::vec::*;
+use std::{env, fs, collections::HashSet};
 
 // remove duplicate characters from a String
 fn dedup_chars(s: String) -> String {
@@ -18,7 +8,7 @@ fn dedup_chars(s: String) -> String {
     return deduped;
 }
 
-fn get_count_for_answers_by_anyone(input: &str) -> i32 {
+fn count_answers_by_anyone(input: &str) -> i32 {
     let mut answered: Vec<String> = Vec::new();
     let mut empty_index = 0;
     let lines = input.lines().collect::<Vec<&str>>();
@@ -40,12 +30,26 @@ fn get_count_for_answers_by_anyone(input: &str) -> i32 {
         .iter()
         .fold(0, |acc, group| acc + group.len() as i32);
 
-    return sum_of_counts;
+    sum_of_counts
 }
 
-fn get_count_for_answers_by_everyone(input: &str) -> i32 {
+fn count_common_answers(answers: Vec<&str>) -> u32 {
+    if answers.is_empty() {
+        return 0;
+    }
+
+    let starting_answers: Vec<char> = answers[0].chars().collect();
+    answers
+        .iter()
+        .fold(starting_answers, |common_answers, answer_by_person| {
+            common_answers.intersect(answer_by_person.chars().collect())
+        })
+        .len() as u32
+}
+
+fn count_answers_by_everyone(input: &str) -> u32 {
     let mut empty_index = 0;
-    let mut sum = 0;
+    let mut sum: u32 = 0;
     let lines = input.lines().collect::<Vec<&str>>();
 
     for (index, line) in lines.iter().enumerate() {
@@ -55,15 +59,16 @@ fn get_count_for_answers_by_everyone(input: &str) -> i32 {
             until.retain(|x| !x.is_empty());
             if until.len() == 1 {
                 let deduped = dedup_chars(until.join(""));
-                sum = sum + deduped.len();
+                sum = sum + deduped.len() as u32;
             } else {
-                // TODO: For groups with multilines, we need to check the number of common characters, and multiple that by `until.len()` which will be our count.
+                let count = count_common_answers(until);
+                sum = sum + count;
             }
             empty_index = index;
         }
     }
 
-    return sum as i32;
+    return sum;
 }
 
 fn main() {
@@ -73,11 +78,11 @@ fn main() {
         fs::read_to_string(filepath).expect("Something went wrong while reading the input file");
 
     println!(" -- Part 01 -- ");
-    let count = get_count_for_answers_by_anyone(&input);
+    let count = count_answers_by_anyone(&input);
     println!("Sum of Counts: {:?}", count);
 
     println!(" -- Part 02 -- ");
-    let count = get_count_for_answers_by_everyone(&input);
+    let count = count_answers_by_everyone(&input);
     println!("Sum of Counts: {:?}", count);
 }
 
@@ -107,7 +112,7 @@ a
 b
 
         "#;
-        let sum_of_counts = get_count_for_answers_by_anyone(input);
+        let sum_of_counts = count_answers_by_anyone(input);
         assert_eq!(sum_of_counts, 11);
     }
 
@@ -131,7 +136,7 @@ a
 b
 
         "#;
-        let sum_of_counts = get_count_for_answers_by_everyone(input);
+        let sum_of_counts = count_answers_by_everyone(input);
         assert_eq!(sum_of_counts, 6);
     }
 }
