@@ -3,10 +3,6 @@ extern crate lazy_static;
 use regex::Regex;
 use std::{collections::HashMap, env, fs};
 
-// Approach:
-// Parse a rule into a HashMap<&str, Vec<(count, &str)>>
-// Iterate through all the entries in the map
-
 const NO_COLOR: &str = "no other bags";
 
 #[derive(Debug, Clone)]
