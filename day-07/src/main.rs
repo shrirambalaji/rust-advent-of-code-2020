@@ -48,6 +48,16 @@ impl BaggyColorGraph {
             self.adjacency_list.entry(color).or_insert(vec![]);
         }
     }
+
+    fn count_bags_inside(&self, color: &str, mut count: u32) -> u32 {
+        let curr = count;
+        if let Some(bags) = self.adjacency_list.get(color) {
+            for bag in bags.iter() {
+                count += bag.count + (bag.count * self.count_bags_inside(&bag.color, curr));
+            }
+        }
+
+        count
     }
 
     fn dfs(&self, source: &str, visited: &mut HashMap<String, bool>) {
@@ -174,6 +184,9 @@ fn main() {
     } else {
         println!("No bags contain the {}", bag_color)
     }
+
+    let bags_inside = graph.count_bags_inside("shiny gold", 0);
+    println!("{} can contain {} other bags", bag_color, bags_inside);
 }
 
 #[cfg(test)]
@@ -199,12 +212,20 @@ dotted black bags contain no other bags.
     #[test]
     fn should_create_graph() {
         let graph = create_graph(&get_rules());
-        assert_eq!(graph.len(), 7);
+        assert_eq!(graph.len(), 9);
     }
 
     #[test]
     fn should_count_edges_to_color_in_graph() {
         let mut graph = create_graph(&get_rules());
         assert_eq!(graph.count_edges_to("shiny gold"), 4);
+    }
+
+    #[test]
+    fn should_contain_bags_inside() {
+        let graph = create_graph(&get_rules());
+        // let visited = HashMap::new();
+        let bags_inside = graph.count_bags_inside("shiny gold", 0);
+        assert_eq!(bags_inside, 32);
     }
 }
