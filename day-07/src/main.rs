@@ -36,13 +36,18 @@ impl BaggyColorGraph {
     }
 
     fn add_edge(&mut self, bag1: &Bag, bag2: &Bag) {
-        let color = bag1.color.clone();
-        let value = bag2.clone();
+        let color = bag1.color.to_string();
+        let bag2 = bag2.clone();
 
-        self.adjacency_list
-            .entry(color)
-            .and_modify(|e| e.push(value))
-            .or_insert(vec![]);
+        if bag2.color != NO_COLOR {
+            self.adjacency_list
+                .entry(color)
+                .and_modify(|e| e.push(bag2))
+                .or_insert(vec![]);
+        } else {
+            self.adjacency_list.entry(color).or_insert(vec![]);
+        }
+    }
     }
 
     fn dfs(&self, source: &str, visited: &mut HashMap<String, bool>) {
@@ -126,20 +131,27 @@ fn create_graph(input: &str) -> BaggyColorGraph {
             let bag_colors_inside: Vec<String> = rules[1]
                 .split(",")
                 .map(|r| r.replace(".", "").trim().to_string())
-                .filter(|c| c != NO_COLOR)
                 .collect();
 
             if !bag_colors_inside.is_empty() {
                 graph.add_vertex(&outer_bag);
                 bag_colors_inside.iter().for_each(|count_and_color| {
-                    let captures = COLOR_BAG_REGEX.captures(count_and_color).unwrap();
-                    let count: u32 = captures[1].parse::<u32>().unwrap();
-                    let bag_color: &str = &captures[2].trim();
-                    let bag = Bag {
-                        count,
-                        color: bag_color.to_owned(),
-                    };
-                    graph.add_edge(&outer_bag, &bag);
+                    if !count_and_color.contains(NO_COLOR) {
+                        let captures = COLOR_BAG_REGEX.captures(count_and_color).unwrap();
+                        let count: u32 = captures[1].parse::<u32>().unwrap();
+                        let bag_color: &str = &captures[2].trim();
+                        let bag = Bag {
+                            count,
+                            color: bag_color.to_owned(),
+                        };
+                        graph.add_edge(&outer_bag, &bag);
+                    } else {
+                        let bag = Bag {
+                            count: 0,
+                            color: NO_COLOR.to_string(),
+                        };
+                        graph.add_edge(&outer_bag, &bag);
+                    }
                 })
             }
         }
