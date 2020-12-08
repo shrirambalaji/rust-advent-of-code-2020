@@ -25,31 +25,80 @@ impl BaggyColorGraph {
         BaggyColorGraph { adjacency_list }
     }
 
-    fn add(&mut self, bag: &Bag) {
+    #[allow(dead_code)]
+    fn len(&self) -> usize {
+        self.adjacency_list.len()
+    }
+
+    fn add_vertex(&mut self, bag: &Bag) {
         let color = &bag.color;
         self.adjacency_list.insert(color.to_owned(), vec![]);
     }
 
     fn add_edge(&mut self, bag1: &Bag, bag2: &Bag) {
-        match self.adjacency_list.get(&bag1.color) {
-            Some(b1_edges) => {
-                let color = &bag1.color;
-                let other = bag2.clone();
-                let mut edges: Vec<Bag> = b1_edges[..].to_vec();
-                edges.push(other);
-                self.adjacency_list.insert(color.to_owned(), edges);
+        let color = bag1.color.clone();
+        let value = bag2.clone();
+
+        self.adjacency_list
+            .entry(color)
+            .and_modify(|e| e.push(value))
+            .or_insert(vec![]);
+    }
+
+    fn dfs(&self, source: &str, visited: &mut HashMap<String, bool>) {
+        let mut stack: Vec<&str> = Vec::new();
+        stack.push(source);
+        visited.insert(source.to_owned(), true);
+
+        while !stack.is_empty() {
+            let node = stack.pop().unwrap();
+            if self.adjacency_list.contains_key(node) {
+                let bags = self.adjacency_list.get(node).unwrap();
+                for bag in bags {
+                    if !(visited.contains_key(&bag.color)) {
+                        stack.push(&bag.color);
+                        let neighbor = bag.color.to_owned();
+                        visited.insert(neighbor, true);
+                    }
+                }
             }
-            None => {}
         }
     }
 
-    fn count_edges_to(&mut self, bag: &Bag) {
-        unimplemented!();
+    fn has_edge(&self, source: &str, destination: &str) -> bool {
+        let mut visited: HashMap<String, bool> = HashMap::new();
+        self.dfs(source, &mut visited);
+        visited.contains_key(destination) && visited.get(destination).unwrap() == &true
+    }
+
+    fn count_edges_to(&mut self, color_to_find: &str) -> u32 {
+        let count = self.adjacency_list.keys().fold(0, |acc, color| {
+            if color != color_to_find {
+                if self.has_edge(color, color_to_find) {
+                    return acc + 1;
+                }
+            }
+            acc
+        });
+        count
+    }
+
+    #[allow(dead_code)]
+    fn print_colors(&mut self) {
+        for (color, bags_inside) in self.adjacency_list.iter() {
+            println!(
+                "{} => {:?}",
+                color,
+                bags_inside
+                    .iter()
+                    .map(|x| x.color.clone())
+                    .collect::<Vec<String>>()
+            );
+        }
     }
 }
 
-// The number of values
-fn process(input: &str) {
+fn create_graph(input: &str) -> BaggyColorGraph {
     lazy_static! {
         static ref COLOR_BAG_REGEX: Regex = Regex::new(r"(\d+)\s+(\w.*)bag").unwrap();
     }
@@ -81,7 +130,7 @@ fn process(input: &str) {
                 .collect();
 
             if !bag_colors_inside.is_empty() {
-                graph.add(&outer_bag);
+                graph.add_vertex(&outer_bag);
                 bag_colors_inside.iter().for_each(|count_and_color| {
                     let captures = COLOR_BAG_REGEX.captures(count_and_color).unwrap();
                     let count: u32 = captures[1].parse::<u32>().unwrap();
@@ -96,7 +145,7 @@ fn process(input: &str) {
         }
     });
 
-    println!("{:?}", graph);
+    return graph;
 }
 
 fn main() {
@@ -105,8 +154,14 @@ fn main() {
     let input =
         fs::read_to_string(filepath).expect("Something went wrong while reading the input file");
 
-    process(&input);
-    println!("Hello, world!");
+    let mut graph = create_graph(&input);
+    let bag_color = "shiny gold";
+    let count = graph.count_edges_to(bag_color);
+    if count > 0 {
+        println!("Number of bags which can contain {}: {}", bag_color, count)
+    } else {
+        println!("No bags contain the {}", bag_color)
+    }
 }
 
 #[cfg(test)]
@@ -114,8 +169,7 @@ fn main() {
 mod tests {
     use super::*;
 
-    #[test]
-    fn should_process() {
+    fn get_rules() -> String {
         let rules = r#"
 light red bags contain 1 bright white bag, 2 muted yellow bags.
 dark orange bags contain 3 bright white bags, 4 muted yellow bags.
@@ -127,7 +181,18 @@ vibrant plum bags contain 5 faded blue bags, 6 dotted black bags.
 faded blue bags contain no other bags.
 dotted black bags contain no other bags.
         "#;
+        return rules.to_owned();
+    }
 
-        process(rules);
+    #[test]
+    fn should_create_graph() {
+        let graph = create_graph(&get_rules());
+        assert_eq!(graph.len(), 7);
+    }
+
+    #[test]
+    fn should_count_edges_to_color_in_graph() {
+        let mut graph = create_graph(&get_rules());
+        assert_eq!(graph.count_edges_to("shiny gold"), 4);
     }
 }
