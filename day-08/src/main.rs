@@ -1,69 +1,101 @@
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::{env, fs};
 
-// fn crop_letters(s: &str, pos: usize) -> &str {
-//     match s.char_indices().nth(pos) {
-//         Some((pos, _)) => &s[pos..],
-//         None => "",
-//     }
-// }
+fn parse_instruction(line: &str) -> (&str, i32) {
+    let instruction = line.split_whitespace().collect::<Vec<&str>>();
+    let operation = match instruction.get(0) {
+        Some(operation) => operation,
+        None => {
+            panic!("Invalid operation")
+        }
+    };
 
-fn process_instructions(input: &str) -> Result<i32, String> {
-    let mut accumulator = 0;
-    let known_operations = vec!["acc", "nop", "jmp"];
+    let argument = match instruction.get(1) {
+        Some(argument) => argument.parse::<i32>().unwrap(),
+        None => {
+            panic!("Invalid argument");
+        }
+    };
+
+    (operation, argument)
+}
+
+fn parse(input: &str) -> Vec<(&str, i32)> {
     let lines = input
         .lines()
         .map(|l| l.trim())
         .filter(|l| !l.is_empty())
-        .collect::<Vec<&str>>();
+        .map(parse_instruction)
+        .collect::<Vec<(&str, i32)>>();
 
-    let mut processed: HashMap<i32, bool> = HashMap::new();
-    let mut curr = 0;
+    lines
+}
 
-    for (_index, _line) in lines.iter().enumerate() {
-        let line = match lines.get(curr as usize) {
-            Some(line) => line,
-            None => panic!("Invalid index".to_owned()),
-        };
+fn process_instructions(instructions: &Vec<(&str, i32)>) -> Result<i32, i32> {
+    let mut processed: HashSet<isize> = HashSet::new();
+    let mut accumulator = 0;
+    let mut curr: isize = 0;
 
-        let instruction = line.split_whitespace().collect::<Vec<&str>>();
-        let operation = match instruction.get(0) {
-            Some(operation) => operation,
-            None => {
-                panic!("Invalid operation")
-            }
-        };
-
-        let argument = match instruction.get(1) {
-            Some(argument) => argument.parse::<i32>().unwrap(),
-            None => {
-                panic!("Invalid argument");
-            }
-        };
-
-        if !known_operations.contains(operation) {
-            panic!(format!("Unknown operation {}", operation));
+    loop {
+        // bounds check
+        if curr > instructions.len() as isize || curr < 0 {
+            panic!("Invalid index. Out of bounds of Instruction Set");
         }
 
-        if processed.contains_key(&curr) {
-            break;
-        } else {
-            processed.insert(curr, true);
+        // if the instruction has already been processed, then its an infinite loop. So break with an error, with the acc's value
+        if processed.contains(&curr) {
+            break Err(accumulator);
         }
 
-        curr = curr + 1;
-        match *operation {
-            "acc" => {
+        // we have reached the end of the bootcode. so the program can terminate.
+        if curr == instructions.len() as isize {
+            break Ok(accumulator);
+        }
+
+        processed.insert(curr);
+        match instructions[curr as usize] {
+            ("acc", argument) => {
+                curr = curr + 1;
                 accumulator = accumulator + argument;
             }
-            "jmp" => {
-                curr = curr - 1 + argument;
+            ("jmp", argument) => {
+                // we shouldn't increment the current index during a jump, so we decrement it by 1, before adding the argument.
+                curr = curr + argument as isize;
             }
+            ("nop", _) => {
+                curr = curr + 1;
+            }
+
             _ => {}
         }
     }
+}
 
-    Ok(accumulator)
+fn fix_bootcode_by_swap(instructions: &Vec<(&str, i32)>) -> i32 {
+    // iterate through all instructions
+    // swap out a single nop -> jmp, and a jmp -> nop
+    // if the program is able to terminate sucssefully, we get an Ok(acc) with the accumulator value.
+    for (index, &instruction) in instructions.iter().enumerate() {
+        match instruction {
+            ("acc", _) => continue,
+            ("nop", val) => {
+                let mut instructions = instructions.clone();
+                instructions[index] = ("jmp", val);
+                if let Ok(accumulator) = process_instructions(&instructions) {
+                    return accumulator;
+                }
+            }
+            ("jmp", val) => {
+                let mut instructions = instructions.clone();
+                instructions[index] = ("nop", val);
+                if let Ok(accumulator) = process_instructions(&instructions) {
+                    return accumulator;
+                }
+            }
+            _ => continue,
+        }
+    }
+    return 0;
 }
 
 fn main() {
@@ -73,8 +105,19 @@ fn main() {
         fs::read_to_string(filepath).expect("Something went wrong while reading the input file");
 
     // -- Part 01 --
-    let accumulator = process_instructions(&input);
-    println!("The acccumulator value right before going into an infinite loop: {}", accumulator.unwrap());
+    let instructions = parse(&input);
+    let accumulator = process_instructions(&instructions);
+    println!(
+        "The accumulator value right before going into an infinite loop: {}",
+        accumulator.unwrap_err()
+    );
+
+    // -- Part 02 --
+    let accumulator = fix_bootcode_by_swap(&instructions);
+    println!(
+        "The accumulator value after the program terminates is: {}",
+        accumulator
+    );
 }
 
 #[cfg(test)]
@@ -83,8 +126,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn should_process_boot_code_instructions() {
-        let instructions = r#"
+    fn should_return_acc_before_entering_infinite_loop() {
+        let bootcode = r#"
         nop +0
         acc +1
         jmp +4
@@ -95,7 +138,8 @@ mod tests {
         jmp -4
         acc +6
        "#;
+        let instructions = parse(bootcode);
         let acc = process_instructions(&instructions);
-        assert_eq!(acc, Ok(5))
+        assert_eq!(acc, Err(5))
     }
 }
