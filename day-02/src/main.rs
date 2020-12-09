@@ -176,11 +176,3 @@ fn main() {
     let count = find_valid_password_count(&policies_and_passwords, PolicyType::New);
     println!("Number of valid passwords by New Policy: {}", count);
 }
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn name() {
-        unimplemented!();
-    }
-}
