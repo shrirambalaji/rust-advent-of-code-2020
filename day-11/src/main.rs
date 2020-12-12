@@ -101,6 +101,7 @@ fn count_occupied_seats(seats: &mut Vec<Vec<char>>) -> usize {
         .count()
 }
 
+// chaos isn't a pit. chaos is a ladder.
 fn count_occupied_seats_after_chaos(seats: &mut Vec<Vec<char>>) -> usize {
     let (mut new_arrangement, is_modified) = apply_seating_rules(seats);
     if !is_modified {
