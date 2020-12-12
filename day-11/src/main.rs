@@ -14,7 +14,20 @@ fn create_seat_layout(input: &str) -> Vec<Vec<char>> {
     grid
 }
 
-fn apply_seating_rules(seats: &mut Vec<Vec<char>>) -> (Vec<Vec<char>>, bool) {
+enum SeatingRuleType {
+    PartOne,
+    PartTwo,
+}
+
+fn apply_seating_rules(
+    seats: &mut Vec<Vec<char>>,
+    rule_type: &SeatingRuleType,
+) -> (Vec<Vec<char>>, bool) {
+    let adjacent_occupied_limit = match rule_type {
+        SeatingRuleType::PartOne => 4,
+        SeatingRuleType::PartTwo => 5,
+    };
+
     let get_seat = |row_idx: usize, col_idx: usize| -> Option<&char> {
         match seats.get(row_idx) {
             Some(row) => return row.get(col_idx),
@@ -79,12 +92,17 @@ fn apply_seating_rules(seats: &mut Vec<Vec<char>>) -> (Vec<Vec<char>>, bool) {
                     }
                 }
                 OCCUPIED_SEAT => {
-                    if count_occupied_neighbors(row_idx, col_idx) >= 4 {
+                    if count_occupied_neighbors(row_idx, col_idx) >= adjacent_occupied_limit {
                         modified = true;
                         new_arrangement[row_idx][col_idx] = EMPTY_SEAT;
                     }
                 }
-                // FLOOR => {}
+                FLOOR => {
+                    match rule_type {
+                        SeatingRuleType::PartOne => {}
+                        SeatingRuleType::PartTwo => {}
+                    };
+                }
                 _ => {}
             }
         }
@@ -101,12 +119,15 @@ fn count_occupied_seats(seats: &mut Vec<Vec<char>>) -> usize {
         .count()
 }
 
-fn count_occupied_seats_after_chaos(seats: &mut Vec<Vec<char>>) -> usize {
-    let (mut new_arrangement, is_modified) = apply_seating_rules(seats);
+fn count_occupied_seats_after_chaos(
+    seats: &mut Vec<Vec<char>>,
+    rule_type: &SeatingRuleType,
+) -> usize {
+    let (mut new_arrangement, is_modified) = apply_seating_rules(seats, &rule_type);
     if !is_modified {
         return count_occupied_seats(&mut new_arrangement);
     } else {
-        return count_occupied_seats_after_chaos(&mut new_arrangement);
+        return count_occupied_seats_after_chaos(&mut new_arrangement, &rule_type);
     }
 }
 
@@ -119,7 +140,7 @@ fn main() {
     let mut seats = create_seat_layout(&input);
     // -- Part 01 --
 
-    let count = count_occupied_seats_after_chaos(&mut seats);
+    let count = count_occupied_seats_after_chaos(&mut seats, &SeatingRuleType::PartOne);
     println!("Number of occupied seats after chaos stabilises {}", count);
 }
 
@@ -163,7 +184,7 @@ L.L.L.."###;
             vec!['L', '.', 'L', 'L', 'L', 'L', 'L', '.', 'L', 'L'],
         ];
 
-        let (new_arrangement, _) = apply_seating_rules(&mut seat_layout);
+        let (new_arrangement, _) = apply_seating_rules(&mut seat_layout, &SeatingRuleType::PartOne);
         let expected = vec![
             vec!['#', '.', '#', '#', '.', '#', '#', '.', '#', '#'],
             vec!['#', '#', '#', '#', '#', '#', '#', '.', '#', '#'],
@@ -195,7 +216,7 @@ L.L.L.."###;
             vec!['L', '.', 'L', 'L', 'L', 'L', 'L', '.', 'L', 'L'],
         ];
 
-        let count = count_occupied_seats_after_chaos(&mut seat_layout);
+        let count = count_occupied_seats_after_chaos(&mut seat_layout, &SeatingRuleType::PartOne);
         assert_eq!(count, 37);
     }
 }
