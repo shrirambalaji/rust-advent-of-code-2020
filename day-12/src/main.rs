@@ -68,55 +68,55 @@ fn parse(input: &str) -> Vec<NavigationInstruction> {
         .collect()
 }
 
-fn maybe_turn(direction: &Directions, turn: &Directions, angle: &u32) -> Option<Directions> {
-    let opposite = || {
-        if *direction == Directions::North {
-            Directions::South
-        } else if *direction == Directions::South {
-            Directions::North
-        } else if *direction == Directions::West {
-            Directions::East
-        } else if *direction == Directions::East {
-            Directions::West
-        } else {
-            panic!("Unknown Direction")
-        }
-    };
+fn turn(direction_before_turn: &Directions, turn: &Directions, angle: &u32) -> Option<Directions> {
+    // turn by 90deg by a specified number of times along the given direction
+    let turn_90 = |times: i32| {
+        let mut direction_after_turn = direction_before_turn.clone();
 
-    let at_right_angles = || match *turn {
-        Directions::Left => {
-            if *direction == Directions::North || *direction == Directions::South {
-                Directions::West
-            } else if *direction == Directions::East {
-                Directions::North
-            } else if *direction == Directions::West {
-                Directions::South
-            } else {
-                panic!("Unknown Turn Direction")
-            }
+        for _ in 0..times {
+            direction_after_turn = match turn {
+                Directions::Left => {
+                    if direction_after_turn == Directions::North {
+                        Directions::West
+                    } else if direction_after_turn == Directions::East {
+                        Directions::North
+                    } else if direction_after_turn == Directions::West {
+                        Directions::South
+                    } else if direction_after_turn == Directions::South {
+                        Directions::East
+                    } else {
+                        panic!("Unknown Turn Direction")
+                    }
+                }
+                Directions::Right => {
+                    if direction_after_turn == Directions::North {
+                        Directions::East
+                    } else if direction_after_turn == Directions::East {
+                        Directions::South
+                    } else if direction_after_turn == Directions::West {
+                        Directions::North
+                    } else if direction_after_turn == Directions::South {
+                        Directions::West
+                    } else {
+                        panic!("Unknown Turn Direction")
+                    }
+                }
+                _ => panic!("Unknown Turn Direction"),
+            };
         }
-        Directions::Right => {
-            if *direction == Directions::North || *direction == Directions::South {
-                Directions::East
-            } else if *direction == Directions::East {
-                Directions::South
-            } else if *direction == Directions::West {
-                Directions::North
-            } else {
-                panic!("Unknown Turn Direction")
-            }
-        }
-        _ => panic!("Unknown Turn Direction"),
+
+        return direction_after_turn;
     };
 
     match *angle {
-        90 => Some(at_right_angles()),
-        180 => Some(opposite()),
-        _ => Some(direction.clone()),
+        90 => Some(turn_90(1)),
+        180 => Some(turn_90(2)),
+        270 => Some(turn_90(3)),
+        _ => Some(direction_before_turn.clone()),
     }
 }
 
-fn travel_along(coordinates: &mut Coordinates, direction: &Directions, units: i32) {
+fn move_ship(direction: &Directions, units: i32, coordinates: &mut Coordinates) {
     match direction {
         Directions::North => coordinates.y += units,
         Directions::East => coordinates.x += units,
@@ -127,32 +127,27 @@ fn travel_along(coordinates: &mut Coordinates, direction: &Directions, units: i3
 }
 
 fn get_manhattan_distance(source: &Coordinates, destination: &Coordinates) -> i32 {
-    let x1 = source.x;
-    let x2 = destination.x;
-    let y1 = source.y;
-    let y2 = destination.y;
-
-    let x_diff = if x1 < x2 { x2 - x1 } else { x1 - x2 };
-    let y_diff = if y1 < y2 { y2 - y1 } else { y1 - y2 };
-    x_diff + y_diff
+    return (source.x - destination.x).abs() + (source.y - destination.y).abs();
 }
 
-fn navigate(mut start: &mut Coordinates, instructions: &Vec<NavigationInstruction>) -> Coordinates {
+fn navigate_ship(mut coordinates: &mut Coordinates, instructions: &Vec<NavigationInstruction>) {
+    // Initial direction is East
     let mut direction = Directions::East;
     for instruction in instructions.iter() {
         let units = instruction.units;
         let current_direction = &instruction.direction;
+        // Turn if the current direction mentioned is either left or right, skip to the next instruction.
         if *current_direction == Directions::Left || *current_direction == Directions::Right {
-            direction = maybe_turn(&direction, current_direction, &units).unwrap();
+            direction = turn(&direction, current_direction, &units).unwrap();
             continue;
-        } else if *current_direction == Directions::Forward {
-            travel_along(&mut start, &direction, units as i32);
+        }
+
+        if *current_direction == Directions::Forward {
+            move_ship(&direction, units as i32, &mut coordinates);
         } else {
-            travel_along(&mut start, current_direction, units as i32);
+            move_ship(current_direction, units as i32, &mut coordinates);
         }
     }
-
-    return start.clone();
 }
 
 fn main() {
@@ -161,13 +156,10 @@ fn main() {
     let input =
         fs::read_to_string(filepath).expect("Something went wrong while reading the input!");
 
-    let mut start: Coordinates = Coordinates { x: 0, y: 0 };
+    let mut coordinates: Coordinates = Coordinates { x: 0, y: 0 };
     let instructions = parse(&input);
-    let destination = navigate(&mut start, &instructions);
-
-    println!("{:?}", destination);
-    let manhattan_distance = get_manhattan_distance(&Coordinates { x: 0, y: 0 }, &destination);
-
+    navigate_ship(&mut coordinates, &instructions);
+    let manhattan_distance = get_manhattan_distance(&Coordinates { x: 0, y: 0 }, &coordinates);
     println!("Manhattan Distance: {}", manhattan_distance);
 }
 
@@ -177,7 +169,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn should_navigate() {
+    fn should_navigate_ship() {
         let input = r#"
         F10
         N3
@@ -186,10 +178,10 @@ mod tests {
         F11
         "#;
 
-        let mut start: Coordinates = Coordinates { x: 0, y: 0 };
+        let mut coordinates: Coordinates = Coordinates { x: 0, y: 0 };
         let instructions = parse(&input);
-        let destination = navigate(&mut start, &instructions);
-        let manhattan_distance = get_manhattan_distance(&start, &destination);
+        navigate_ship(&mut coordinates, &instructions);
+        let manhattan_distance = get_manhattan_distance(&Coordinates { x: 0, y: 0 }, &coordinates);
         assert_eq!(manhattan_distance, 25);
     }
 }
