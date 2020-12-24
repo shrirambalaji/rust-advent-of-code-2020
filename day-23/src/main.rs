@@ -1,6 +1,6 @@
 use std::{env, fs};
 
-/// A Doubly LinkedList of Cups, where each index holds the value to the next element, represented as a Vec.
+/// A Singly LinkedList of Cups, where each index holds the value to the next element, represented as a Vec.
 /// Every index points to the next cup, i.e. cups[5] returns the neighbor of cup 5.alloc
 ///
 /// For eg. The sequence `[3, 8, 9, 1, 2, 5, 4, 6, 7]` represented as a CupplyLinkedList becomes `[0, 2, 5, 8, 6, 4, 7, 3, 9, 1]`
