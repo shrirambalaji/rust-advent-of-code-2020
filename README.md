@@ -1,6 +1,6 @@
 <div>
 <br>
-<img src="./media/cover.png" />
+<img src="https://og.shrirambalaji.com/api/images?title=Advent%20of%20Code&subtitle=2020%20in%20Rust&center=true&hideUsername=true&center=true&backgroundImageURL=https://www.raycast.com/uploads/wallpapers/ray-of-lights-preview.png" />
 </br>
 </div>
 <br>
